@@ -1,0 +1,34 @@
+# ── Maven 编译输出 ─────────────────────────────
+target/
+*.jar
+*.war
+*.ear
+
+# ── Node / Vite 前端 ──────────────────────────
+node_modules/
+node/
+dist/
+.vite/
+
+# ── 前端构建产物（由 Maven 自动生成，不提交）──
+packages/openbe-queen/src/main/resources/static/assets/
+
+# ── 系统文件 ──────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# ── 日志 & 运行时 ─────────────────────────────
+*.log
+*.pid
+
+# ── 本地配置 ──────────────────────────────────
+.env
+.env.local
+application-local.yml

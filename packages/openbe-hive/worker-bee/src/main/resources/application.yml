@@ -1,0 +1,22 @@
+spring:
+  main:
+    web-application-type: none
+  application:
+    name: worker-bee
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
+
+openbe:
+  bee:
+    type: WORKER
+  llm:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:qwen3.5:9b}
+    timeout-seconds: 120
+
+logging:
+  level:
+    com.openbe: DEBUG

@@ -1,0 +1,28 @@
+# OpenBe 基础设施
+# Redis 作为"信息素 (Pheromone)"多车道通信的底层消息总线
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: openbe-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - openbe_redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  openbe_redis_data:
+    name: openbe_redis_data
