@@ -87,7 +87,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '../stores/app.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 
-const CURRENT_VERSION = '0.2.0'
+const CURRENT_VERSION = '0.3.0'
 // 更新检查地址（上线后替换为真实接口）
 const UPDATE_CHECK_URL = '/api/version/latest'
 
