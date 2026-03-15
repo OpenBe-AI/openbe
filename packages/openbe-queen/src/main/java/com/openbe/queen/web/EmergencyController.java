@@ -100,7 +100,18 @@ public class EmergencyController {
         System.out.println("\033[33m║  感谢使用 OpenBe，期待下次再见 👋               ║\033[0m");
         System.out.println("\033[33m╚══════════════════════════════════════════════════╝\033[0m");
 
-        // ── 3. 延迟关闭 Queen ───────────────────────────────────
+        // ── 3. 停止 Docker 容器 ─────────────────────────────────
+        try {
+            new ProcessBuilder("docker", "stop", "openbe-redis")
+                .redirectErrorStream(true).start().waitFor();
+            new ProcessBuilder("docker", "rm", "openbe-redis")
+                .redirectErrorStream(true).start().waitFor();
+            report.put("dockerRedis", "stopped");
+        } catch (Exception e) {
+            report.put("dockerRedis", "error: " + e.getMessage());
+        }
+
+        // ── 4. 延迟关闭 Queen ───────────────────────────────────
         new Thread(() -> {
             try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
             System.exit(0);

@@ -6,7 +6,7 @@
 
     <groupId>com.openbe</groupId>
     <artifactId>openbe-workspace</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.3.0</version>
     <packaging>pom</packaging>
     <name>OpenBe Workspace</name>
     <description>OpenBe — 本地去中心化 AI 智能体系统（蜂群架构）</description>

@@ -87,9 +87,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '../stores/app.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 
-const CURRENT_VERSION = '0.3.0'
-// 更新检查地址（上线后替换为真实接口）
-const UPDATE_CHECK_URL = '/api/version/latest'
+const CURRENT_VERSION = ref('...')
 
 const store     = useAppStore()
 const { status } = useWebSocket()
@@ -103,6 +101,15 @@ const latestRelease   = ref(null)   // { version, notes, url }
 const checking        = ref(false)
 const lastChecked     = ref('')
 
+async function fetchCurrentVersion() {
+  try {
+    const res = await fetch('/api/version/current', { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) return
+    const data = await res.json()
+    if (data.version && data.version !== 'unknown') CURRENT_VERSION.value = data.version
+  } catch { /* 静默 */ }
+}
+
 function toggleUpdatePanel() {
   showUpdatePanel.value = !showUpdatePanel.value
   if (showUpdatePanel.value && !lastChecked.value) {
@@ -114,11 +121,11 @@ async function checkUpdate(manual = false) {
   if (checking.value) return
   checking.value = true
   try {
-    const res = await fetch(UPDATE_CHECK_URL, { signal: AbortSignal.timeout(5000) })
+    const res = await fetch('/api/version/latest', { signal: AbortSignal.timeout(8000) })
     if (!res.ok) throw new Error('no endpoint')
     const data = await res.json()
     const latest = data.version || data.tag || ''
-    if (latest && latest !== CURRENT_VERSION) {
+    if (latest && latest !== CURRENT_VERSION.value) {
       hasUpdate.value = true
       latestRelease.value = {
         version: latest,
@@ -130,7 +137,6 @@ async function checkUpdate(manual = false) {
       latestRelease.value = null
     }
   } catch {
-    // 接口不存在或超时 — 静默失败，不弹错误
     if (manual) {
       hasUpdate.value = false
       latestRelease.value = null
@@ -142,8 +148,9 @@ async function checkUpdate(manual = false) {
   }
 }
 
-onMounted(() => {
-  // 启动后 3 秒静默检查一次
+onMounted(async () => {
+  await fetchCurrentVersion()
+  // 启动后 3 秒静默检查一次更新
   setTimeout(() => checkUpdate(false), 3000)
 })
 

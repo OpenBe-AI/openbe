@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  OpenBe 一键安装脚本  v0.5.0
+#  OpenBe 一键安装脚本  v0.6.0
 #  支持：macOS (Intel / Apple Silicon) · Linux (apt / dnf / yum)
 #
 #  远程安装（推荐）：
@@ -87,7 +87,7 @@ cat << 'BANNER'
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚═════╝ ╚══════╝
 BANNER
 echo -e "${RESET}"
-echo -e "${BOLD}  OpenBe 安装程序 v0.5.0${RESET}"
+echo -e "${BOLD}  OpenBe 安装程序 v0.6.0${RESET}"
 echo -e "${DIM}  平台：${OS_TYPE}  |  模式：${INSTALL_MODE}  |  命令目录：${OPENBE_BIN}${RESET}"
 echo ""
 
@@ -329,6 +329,32 @@ fi
 [[ -f "${OPENBE_HOME}/openbe-cli.jar"   ]] || die "openbe-cli.jar 未找到"
 info "Queen  JAR：$(du -sh "${OPENBE_HOME}/openbe-queen.jar" | cut -f1)"
 info "CLI    JAR：$(du -sh "${OPENBE_HOME}/openbe-cli.jar"   | cut -f1)"
+
+# ============================================================
+# Step 2.5 — 生成琥珀封存完整清理脚本 (launch.sh)
+# ============================================================
+LAUNCH_SH="${OPENBE_HOME}/launch.sh"
+info "生成 launch.sh → ${LAUNCH_SH}"
+cat > "${LAUNCH_SH}" << 'LAUNCHEOF'
+#!/bin/bash
+# OpenBe Queen 启动脚本
+# 当「琥珀封存」触发后，Java 进程退出，此脚本自动执行完整清理
+OPENBE_HOME="$HOME/.openbe"
+QUEEN_JAR="$OPENBE_HOME/openbe-queen.jar"
+PORT="${1:-8080}"
+echo "🐝 启动 OpenBe Queen (端口 $PORT)..."
+java -jar "$QUEEN_JAR" --server.port="$PORT"
+# 检测琥珀封存信号：wipe 会删除整个 ~/.openbe 目录
+# 若目录已不存在，说明是琥珀封存触发的完整清理（而非崩溃）
+if [ ! -d "$OPENBE_HOME" ]; then
+    echo ""
+    echo "🟡 琥珀封存已执行，停止 Docker 残留容器..."
+    docker stop openbe-redis 2>/dev/null && docker rm openbe-redis 2>/dev/null || true
+    echo "✅ 清理完成，OpenBe 已彻底移除。"
+fi
+LAUNCHEOF
+chmod +x "${LAUNCH_SH}"
+ok "launch.sh 已生成"
 
 # ============================================================
 # Step 3 — 安装 openbe 命令
