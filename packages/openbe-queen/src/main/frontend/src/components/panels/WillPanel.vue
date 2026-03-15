@@ -94,7 +94,14 @@
               </div>
               <div class="will-form-group">
                 <label class="will-label">{{ t('model') }}</label>
-                <input class="will-input" v-model="engineForm.model" type="text" placeholder="e.g. gpt-4o / llama3 / deepseek-chat">
+                <div v-if="engineForm.provider === 'ollama'" style="display:flex;gap:6px;align-items:center">
+                  <select v-if="ollamaModels.length" class="will-input" style="flex:1" v-model="engineForm.model">
+                    <option v-for="m in ollamaModels" :key="m" :value="m">{{ m }}</option>
+                  </select>
+                  <input v-else class="will-input" style="flex:1" v-model="engineForm.model" type="text" :placeholder="loadingModels ? '加载中…' : 'e.g. qwen2.5:7b'">
+                  <button class="will-btn-ghost will-btn-sm" :disabled="loadingModels" @click="fetchOllamaModels" title="刷新本地模型">↻</button>
+                </div>
+                <input v-else class="will-input" v-model="engineForm.model" type="text" placeholder="e.g. gpt-4o / deepseek-chat">
               </div>
               <div class="will-form-group" v-if="engineForm.provider !== 'ollama'">
                 <label class="will-label">API Key</label>
@@ -205,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import { useAppStore } from '../../stores/app.js'
 import { useI18n } from '../../composables/useI18n.js'
 import { useApi } from '../../composables/useApi.js'
@@ -222,9 +229,29 @@ const emit = defineEmits(['toast', 'refresh-hives'])
 const { speciesLabel, speciesEmoji: _speciesEmoji } = useSpecies()
 const { activeBees } = useActiveBees()
 
-const tab     = ref('engine')
-const saving  = ref(false)
-const maskedKey = ref('')
+const tab          = ref('engine')
+const saving       = ref(false)
+const maskedKey    = ref('')
+const ollamaModels  = ref([])
+const loadingModels = ref(false)
+
+async function fetchOllamaModels() {
+  loadingModels.value = true
+  try {
+    ollamaModels.value = await api.getOllamaModels()
+    if (ollamaModels.value.length && !ollamaModels.value.includes(engineForm.model))
+      engineForm.model = ollamaModels.value[0]
+  } catch { ollamaModels.value = [] }
+  finally { loadingModels.value = false }
+}
+
+onMounted(fetchOllamaModels)
+
+watch(() => engineForm.provider, (p) => { if (p === 'ollama') fetchOllamaModels() })
+watch(ollamaModels, (list) => {
+  if (engineForm.provider === 'ollama' && list.length && !engineForm.model)
+    engineForm.model = list[0]
+})
 const streamEl  = ref(null)
 
 const providerOptions = [
@@ -405,6 +432,10 @@ async function selectBee(key, bee = null) {
     } catch {}
   }
 
+  // provider=ollama 且 model 为空时自动选第一个本地模型
+  if (engineForm.provider === 'ollama' && !engineForm.model && ollamaModels.value.length)
+    engineForm.model = ollamaModels.value[0]
+
   await loadWorkspace()
 }
 
@@ -431,12 +462,10 @@ async function saveEngine() {
         model: engineForm.model.trim(), baseUrl: engineForm.baseUrl.trim(),
         temperature: String(engineForm.temperature), systemPrompt: engineForm.systemPrompt.trim(),
       })
-      if (engineForm.apiKey.trim() || engineForm.provider !== 'ollama') {
-        await api.putBeeApiKey(species, {
-          provider: engineForm.provider, model: engineForm.model.trim(),
-          apiKey: engineForm.apiKey.trim(), baseUrl: engineForm.baseUrl.trim(),
-        })
-      }
+      await api.putBeeApiKey(species, {
+        provider: engineForm.provider, model: engineForm.model.trim(),
+        apiKey: engineForm.apiKey.trim(), baseUrl: engineForm.baseUrl.trim(),
+      })
     }
     emit('toast', { message: '思维引擎已保存', type: 'success' })
   } catch (e) {

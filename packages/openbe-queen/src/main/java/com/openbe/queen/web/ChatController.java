@@ -280,9 +280,15 @@ public class ChatController {
             } catch (Exception ignored) {}
         }
 
-        // 加载该蜜蜂类型的 API 配置（按 healthType：nurse 或 worker）
-        String typeKey = (entry != null && "NURSE".equalsIgnoreCase(entry.healthType)) ? "nurse" : "worker";
-        Map<String, Object> apiCfg = loadBeeApiKey(typeKey);
+        // 优先读该蜂种专属配置（如 painter-apikey.json），再降级到 healthType 配置
+        String speciesKey = (entry != null && entry.species != null && !entry.species.isBlank())
+            ? entry.species.toLowerCase() : null;
+        Map<String, Object> apiCfg = speciesKey != null ? loadBeeApiKey(speciesKey) : null;
+        if (apiCfg == null || apiCfg.getOrDefault("model", "").toString().isBlank()) {
+            String typeKey = (entry != null && "NURSE".equalsIgnoreCase(entry.healthType)) ? "nurse" : "worker";
+            Map<String, Object> fallback = loadBeeApiKey(typeKey);
+            if (fallback != null) apiCfg = fallback;
+        }
 
         try {
             String provider    = apiCfg != null ? (String) apiCfg.getOrDefault("provider", "ollama") : "ollama";

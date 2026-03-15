@@ -10,8 +10,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermission;
+import java.time.Duration;
 import java.util.*;
 
 /**
@@ -401,6 +406,32 @@ public class ManagementController {
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("status", "pending", "purifiedAt", "", "beesProcessed", 0));
+        }
+    }
+
+    // ── Ollama 本地模型列表 ───────────────────────────────
+
+    @GetMapping("/ollama/models")
+    public ResponseEntity<List<String>> getOllamaModels() {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(3)).build();
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:11434/api/tags"))
+                .timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() != 200) return ResponseEntity.ok(List.of());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = objectMapper.readValue(resp.body(), Map.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> models = (List<Map<String, Object>>) body.getOrDefault("models", List.of());
+            List<String> names = models.stream()
+                .map(m -> (String) m.getOrDefault("name", ""))
+                .filter(s -> !s.isBlank())
+                .toList();
+            return ResponseEntity.ok(names);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
         }
     }
 

@@ -28,7 +28,14 @@
 
       <div class="form-group">
         <label class="form-label">{{ t('model_label') }}</label>
-        <input class="form-control" v-model="form.model" type="text" placeholder="e.g. llama3 / qwen2.5">
+        <div v-if="form.provider === 'ollama'" style="display:flex;gap:6px;align-items:center">
+          <select v-if="ollamaModels.length" class="form-control" v-model="form.model">
+            <option v-for="m in ollamaModels" :key="m" :value="m">{{ m }}</option>
+          </select>
+          <input v-else class="form-control" v-model="form.model" type="text" :placeholder="loadingModels ? '加载中…' : 'e.g. qwen2.5:7b'">
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:.85rem;flex-shrink:0" :disabled="loadingModels" @click="fetchOllamaModels" title="刷新本地模型">↻</button>
+        </div>
+        <input v-else class="form-control" v-model="form.model" type="text" placeholder="e.g. gpt-4o">
       </div>
 
       <div v-if="riskAcked && form.provider !== 'ollama'" class="form-group">
@@ -83,9 +90,21 @@ const props = defineProps({ visible: Boolean })
 const emit = defineEmits(['close', 'confirm', 'toast'])
 
 const api = useApi()
-const riskExpanded = ref(false)
-const riskAcked = ref(false)
-const apiKeyMasked = ref('')
+const riskExpanded  = ref(false)
+const riskAcked     = ref(false)
+const apiKeyMasked  = ref('')
+const ollamaModels  = ref([])
+const loadingModels = ref(false)
+
+async function fetchOllamaModels() {
+  loadingModels.value = true
+  try {
+    ollamaModels.value = await api.getOllamaModels()
+    if (ollamaModels.value.length && !ollamaModels.value.includes(form.model))
+      form.model = ollamaModels.value[0]
+  } catch { ollamaModels.value = [] }
+  finally { loadingModels.value = false }
+}
 
 const form = reactive({
   provider: 'ollama',
@@ -95,7 +114,16 @@ const form = reactive({
 })
 
 watch(() => props.visible, async (v) => {
-  if (v) await loadCurrentConfig()
+  if (v) { await loadCurrentConfig(); fetchOllamaModels() }
+})
+
+watch(() => form.provider, (p) => {
+  if (p === 'ollama' && ollamaModels.value.length === 0) fetchOllamaModels()
+})
+
+watch(ollamaModels, (list) => {
+  if (form.provider === 'ollama' && list.length && !form.model)
+    form.model = list[0]
 })
 
 async function loadCurrentConfig() {

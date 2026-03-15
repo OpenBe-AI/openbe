@@ -77,7 +77,14 @@
             </div>
             <div class="form-group">
               <label class="form-label">{{ t('model') }}</label>
-              <input class="form-control" v-model="form.model" type="text" placeholder="e.g. gpt-4o / llama3">
+              <div v-if="form.provider === 'ollama'" style="display:flex;gap:6px;align-items:center">
+                <select v-if="ollamaModels.length" class="form-control" v-model="form.model">
+                  <option v-for="m in ollamaModels" :key="m" :value="m">{{ m }}</option>
+                </select>
+                <input v-else class="form-control" v-model="form.model" type="text" :placeholder="loadingModels ? '加载中…' : 'e.g. qwen2.5:7b'">
+                <button class="btn btn-ghost" style="padding:4px 10px;font-size:.85rem;flex-shrink:0" :disabled="loadingModels" @click="fetchOllamaModels" title="刷新本地模型">↻</button>
+              </div>
+              <input v-else class="form-control" v-model="form.model" type="text" placeholder="e.g. gpt-4o">
             </div>
             <div v-if="form.provider !== 'ollama'" class="form-group">
               <label class="form-label">API Key</label>
@@ -185,11 +192,33 @@ const selectedLabel = computed(() =>
     : (selectedBee.value?.beeName || speciesLabel(selectedBee.value || {}))
 )
 
-const saving   = ref(false)
-const maskedKey = ref('')
+const saving       = ref(false)
+const maskedKey    = ref('')
+const ollamaModels = ref([])
+const loadingModels = ref(false)
 const form = reactive({
   name: '', provider: 'ollama', model: '',
   apiKey: '', baseUrl: '', temperature: 0.7, systemPrompt: '',
+})
+
+async function fetchOllamaModels() {
+  loadingModels.value = true
+  try {
+    ollamaModels.value = await api.getOllamaModels()
+    if (ollamaModels.value.length && !ollamaModels.value.includes(form.model))
+      form.model = ollamaModels.value[0]
+  } catch { ollamaModels.value = [] }
+  finally { loadingModels.value = false }
+}
+
+watch(() => form.provider, (p) => {
+  if (p === 'ollama') fetchOllamaModels()
+})
+
+// 模型列表异步加载完后，若 model 仍为空则自动选第一个
+watch(ollamaModels, (list) => {
+  if (form.provider === 'ollama' && list.length && !form.model)
+    form.model = list[0]
 })
 
 async function selectBee(key, bee = null) {
@@ -197,6 +226,7 @@ async function selectBee(key, bee = null) {
   selectedBee.value  = bee
   maskedKey.value    = ''
   Object.assign(form, { name: '', provider: 'ollama', model: '', apiKey: '', baseUrl: '', temperature: 0.7, systemPrompt: '' })
+  if (ollamaModels.value.length === 0) fetchOllamaModels()
 
   if (key === '__queen__') {
     // 蜂王：从 hive.bee 读取
@@ -233,6 +263,9 @@ async function selectBee(key, bee = null) {
       if (!form.model) form.model = ak.model || ''
     } catch {}
   }
+  // 加载完配置后，若 provider=ollama 且 model 仍为空，自动选中第一个本地模型
+  if (form.provider === 'ollama' && !form.model && ollamaModels.value.length)
+    form.model = ollamaModels.value[0]
 }
 
 async function save() {
@@ -257,12 +290,10 @@ async function save() {
         systemPrompt: form.systemPrompt.trim(), temperature: String(form.temperature),
       }
       await api.putConfig(species, cfg)
-      if (form.apiKey.trim() || form.provider !== 'ollama') {
-        await api.putBeeApiKey(species, {
-          provider: form.provider, model: form.model.trim(),
-          apiKey: form.apiKey.trim(), baseUrl: form.baseUrl.trim(),
-        })
-      }
+      await api.putBeeApiKey(species, {
+        provider: form.provider, model: form.model.trim(),
+        apiKey: form.apiKey.trim(), baseUrl: form.baseUrl.trim(),
+      })
     }
     emit('toast', { message: '配置已保存', type: 'success' })
   } catch (e) {

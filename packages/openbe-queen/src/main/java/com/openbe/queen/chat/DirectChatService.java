@@ -187,7 +187,7 @@ public class DirectChatService {
     private String callOllama(String prompt, String model, Double temperature, String systemPrompt) {
         try {
             ObjectNode req = objectMapper.createObjectNode();
-            req.put("model",  model != null && !model.isBlank() ? model : "llama3");
+            req.put("model",  model != null && !model.isBlank() ? model : "qwen2.5:7b");
             req.put("stream", false);
             req.put("think",  false);   // 禁用思考模式，避免生成大量隐藏推理 token
             ArrayNode messages = req.putArray("messages");

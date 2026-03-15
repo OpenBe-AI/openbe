@@ -113,5 +113,8 @@ export function useApi() {
 
     // ── Queen Security ────────────────────────────────────────
     saveQueenSecurity: (payload) => json('POST', '/api/queen/security', payload),
+
+    // ── Ollama ────────────────────────────────────────────────
+    getOllamaModels: () => request('/api/ollama/models').catch(() => []),
   }
 }
