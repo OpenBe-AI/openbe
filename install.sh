@@ -46,7 +46,7 @@ else
 fi
 
 # ── 远程资源基础 URL ──────────────────────────────────────
-RELEASE_BASE="https://openbe.ai/releases/latest"
+RELEASE_BASE="https://github.com/OpenBe-AI/openbe/releases/latest/download"
 OPENBE_HOME="${HOME}/.openbe"
 
 # ── 操作系统检测 ──────────────────────────────────────────
