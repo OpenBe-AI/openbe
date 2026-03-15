@@ -68,10 +68,10 @@ public class EmergencyController {
     }
 
     /**
-     * 琥珀封存 — 清除全部 OpenBe 数据：
+     * 琥珀封存 — 清除全部 OpenBe 数据并关闭系统：
      *  1. 删除 Redis 中所有 openbe:* 前缀的 key
-     *  2. 删除 ~/.openbe/config/ 目录（本地 JSON 配置）
-     *  3. 删除 ~/.openbe/*.log 日志文件
+     *  2. 删除整个 ~/.openbe/ 目录（含 jar、配置、蜂巢、日志）
+     *  3. 延迟 1.5 秒后关闭 Queen 进程
      */
     @PostMapping("/wipe")
     public ResponseEntity<Map<String, Object>> amberSealWipe() {
@@ -90,25 +90,22 @@ public class EmergencyController {
             report.put("redisError", e.getMessage());
         }
 
-        // ── 2. ~/.openbe/config/ 目录 ───────────────────────────
-        Path configDir = Paths.get(System.getProperty("user.home"), ".openbe", "config");
-        report.put("configDir", deleteDir(configDir));
-
-        // ── 3. ~/.openbe/*.log 文件 ─────────────────────────────
+        // ── 2. 删除整个 ~/.openbe/ 目录 ─────────────────────────
         Path openbeHome = Paths.get(System.getProperty("user.home"), ".openbe");
-        long logsDeleted = 0;
-        try (var stream = Files.list(openbeHome)) {
-            logsDeleted = stream
-                .filter(p -> p.getFileName().toString().endsWith(".log"))
-                .mapToLong(p -> { try { Files.delete(p); return 1; } catch (Exception e) { return 0; } })
-                .sum();
-        } catch (Exception ignored) {}
-        report.put("logsDeleted", logsDeleted);
+        report.put("openbeHome", deleteDir(openbeHome));
 
         report.put("status", "WIPED");
-        System.out.println("\033[33m╔══════════════════════════════════════════╗\033[0m");
-        System.out.println("\033[33m║  ☢  琥珀封存已执行 — 蜂巢数据已清除      ║\033[0m");
-        System.out.println("\033[33m╚══════════════════════════════════════════╝\033[0m");
+        System.out.println("\033[33m╔══════════════════════════════════════════════════╗\033[0m");
+        System.out.println("\033[33m║  ☢  琥珀封存已执行 — OpenBe 已完整卸除          ║\033[0m");
+        System.out.println("\033[33m║  感谢使用 OpenBe，期待下次再见 👋               ║\033[0m");
+        System.out.println("\033[33m╚══════════════════════════════════════════════════╝\033[0m");
+
+        // ── 3. 延迟关闭 Queen ───────────────────────────────────
+        new Thread(() -> {
+            try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+            System.exit(0);
+        }, "amber-seal-shutdown").start();
+
         return ResponseEntity.ok(report);
     }
 

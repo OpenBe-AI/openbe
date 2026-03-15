@@ -386,12 +386,13 @@ async function executeDestruct() {
       { text: '> Dimensional Hub: OFFLINE', cls: 'dl-warn' },
       { text: '> Hive Memory: PURGED', cls: 'dl-warn' },
       { text: '> Redis Neural Core: FLUSHED', cls: 'dl-warn' },
-      { text: '> Local Config: ERASED', cls: 'dl-warn' },
+      { text: '> OpenBe Installation: REMOVED', cls: 'dl-warn' },
+      { text: '> System: SHUTTING DOWN', cls: 'dl-warn' },
       { text: '> Amber Seal Protocol: COMPLETE', cls: 'dl-ok' },
       { text: '', cls: '' },
-      { text: '> To remove the software from your system:', cls: 'dl-sys' },
+      { text: '感谢使用 OpenBe，期待下次再见 👋', cls: 'dl-bye' },
     ]
-    deathScreen.cmd = 'rm -rf ~/Desktop/OpenBe-1.0'
+    deathScreen.cmd = ''
     deathScreen.visible = true
   }, 3200)
 }
@@ -1115,6 +1116,7 @@ defineExpose({ load })
 .dl-sys  { color: rgba(245,166,35,0.70); }
 .dl-warn { color: rgba(248,113,113,0.85); }
 .dl-ok   { color: rgba(74,222,128,0.85); }
+.dl-bye  { color: #FFD700; font-size: 1.1em; font-weight: 700; letter-spacing: .04em; }
 
 .death-cmd {
   margin-top: 28px;
